@@ -1,0 +1,159 @@
+[
+    {
+        "key": "0",
+        "label": "Dashboard",
+        "icon": "home",
+        "path": "/dashboard"
+    },
+    {
+        "key": "1",
+        "label": "マスター",
+        "icon": "database",
+        "children": [
+            {
+                "key": "1-1",
+                "label": "店舗管理",
+                "path": "/shoplist",
+                "icon": "shop"
+            },
+            {
+                "key": "1-2",
+                "label": "請求コード",
+                "path": "/master/billing-codes",
+                "icon": "tag"
+            },
+            {
+                "key": "1-3",
+                "label": "単価設定",
+                "path": "/master/billing-codes",
+                "icon": "tag"
+            },
+            {
+                "key": "1-4",
+                "label": "ユーザ管理",
+                "path": "/master/billing-codes",
+                "icon": "team"
+            }
+        ]
+    },
+    {
+        "key": "2",
+        "label": "請求",
+        "icon": "fileText",
+        "children": [
+            {
+                "key": "2-1",
+                "label": "請求業務",
+                "path": "/billing/list",
+                "icon": "table"
+            },
+            {
+                "key": "2-2",
+                "label": "請求元データ入力",
+                "path": "/billing/create",
+                "icon": "form"
+            },
+            {
+                "key": "2-3",
+                "label": "一括調整",
+                "path": "/billing/create",
+                "icon": "edit"
+            },
+            {
+                "key": "2-4",
+                "label": "請求書一括発行",
+                "path": "/billing/create",
+                "icon": "printer"
+            },
+            {
+                "key": "2-5",
+                "label": "売上計上",
+                "path": "/billing/create",
+                "icon": "calculator"
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "key": "2-6",
+                "label": "請求実績出力",
+                "path": "/billing/create",
+                "icon": "download"
+            },
+            {
+                "key": "2-7",
+                "label": "保管実績レポート（月次）",
+                "path": "/billing/create",
+                "icon": "fileText"
+            },
+            {
+                "key": "2-8",
+                "label": "出荷及び配送実績レポート（月次）",
+                "path": "/billing/create",
+                "icon": "truck"
+            },
+            {
+                "key": "2-9",
+                "label": "JP配送実績取込情報",
+                "path": "/billing/create",
+                "icon": "import"
+            }
+        ]
+    },
+    {
+        "key": "3",
+        "label": "代引き",
+        "icon": "creditCard",
+        "children": [
+            {
+                "key": "3-1",
+                "label": "精算状況照会",
+                "path": "/billing/list",
+                "icon": "search"
+            },
+            {
+                "key": "3-2",
+                "label": "出金履歴照会",
+                "path": "/billing/create",
+                "icon": "history"
+            },
+            {
+                "key": "3-3",
+                "label": "入出金カレンダー照会",
+                "path": "/billing/create",
+                "icon": "calendar"
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "key": "3-4",
+                "label": "代引き精算データ取込情報照会",
+                "path": "/billing/create",
+                "icon": "database"
+            }
+        ]
+    },
+    {
+        "key": "4",
+        "label": "弁済",
+        "icon": "checkCircle",
+        "children": [
+            {
+                "key": "4-1",
+                "label": "弁済一覧",
+                "path": "/billing/list",
+                "icon": "table"
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "key": "4-2",
+                "label": "弁済作成",
+                "path": "/billing/create",
+                "icon": "form"
+            }
+        ]
+    }
+]
