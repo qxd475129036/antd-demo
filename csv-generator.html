@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV生成工具</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- Tailwind配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#4080FF',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        info: '#86909C',
+                        light: '#F2F3F5',
+                        dark: '#1D2129',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .scrollbar-hide {
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+        }
+    </style>
+    
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        .input-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #4B5563;
+        }
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #165DFF;
+            box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
+        }
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1D2129;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #E5E7EB;
+        }
+        .combo-hint {
+            font-size: 0.875rem;
+            color: #6B7280;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">
+    <!-- 顶部导航栏 -->
+    <header class="bg-primary text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-file-excel-o text-2xl"></i>
+                <h1 class="text-xl font-bold">CSV生成工具</h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区域 -->
+    <main class="container mx-auto px-4 py-6">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden p-6">
+            <!-- 说明文字 -->
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h2 class="font-semibold text-blue-800 mb-2 flex items-center">
+                    <i class="fa fa-info-circle mr-2"></i>
+                    使用说明
+                </h2>
+                <ul class="list-disc list-inside text-blue-700 space-y-1">
+                    <li>固定值：填写10个固定列的值，这些值会出现在每一行CSV中</li>
+                    <li>组合值：填写5组组合值，每组值用逗号分隔，系统会生成所有可能的组合</li>
+                    <li>CSV格式：包含25列，其中10列固定值，5列组合值，10列额外固定值</li>
+                    <li>点击"生成CSV"按钮后，系统会自动下载生成的CSV文件</li>
+                </ul>
+            </div>
+
+            <!-- 数据分析区域 -->
+            <div class="mb-8 p-6 bg-green-50 rounded-xl border border-green-200">
+                <h3 class="section-title flex items-center">
+                    <i class="fa fa-bar-chart mr-2 text-green-600"></i>
+                    数据分析功能
+                </h3>
+                <p class="mb-4 text-sm text-green-700">
+                    输入CSV文件的表头和一行数据，系统将自动分析并推荐哪些列应该设置为固定值
+                </p>
+                
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="input-group">
+                            <label class="input-label" for="headerInput">CSV表头（用逗号分隔）</label>
+                            <textarea id="headerInput" name="headerInput" class="input-field" rows="2" placeholder="例如：项目1,项目2,项目3,...,项目20"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label" for="dataInput">数据行（用逗号分隔）</label>
+                            <textarea id="dataInput" name="dataInput" class="input-field" rows="2" placeholder="例如：值1,值2,值3,...,值20"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center">
+                        <button type="button" id="analyzeBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg">
+                            <i class="fa fa-magic"></i>
+                            <span>分析数据</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 分析结果 -->
+                    <div id="analysisResult" class="hidden p-4 bg-white rounded-lg border border-green-300">
+                        <h4 class="font-semibold text-green-800 mb-2 flex items-center">
+                            <i class="fa fa-check-circle mr-2"></i>
+                            分析结果
+                        </h4>
+                        <div id="analysisContent"></div>
+                        <div class="mt-3 flex justify-center">
+                            <button type="button" id="applyAnalysis" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2">
+                                <i class="fa fa-download"></i>
+                                <span>应用到配置</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 表单区域 -->
+            <form id="csvForm" class="space-y-8">
+                <!-- 动态配置区域 -->
+                <div>
+                    <h3 class="section-title flex items-center">
+                    <i class="fa fa-cogs mr-2 text-primary"></i>
+                    项目配置
+                </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">项目名称</th>
+                                    <th class="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">类型</th>
+                                    <th class="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">值设置</th>
+                                </tr>
+                            </thead>
+                            <tbody id="projectConfigTable">
+                                <!-- 项目配置行将通过JavaScript动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-600">
+                        <strong>固定值：</strong>该列所有行使用相同的值<br>
+                        <strong>组合值：</strong>使用逗号分隔多个值，系统会生成所有可能的组合
+                    </p>
+                </div>
+
+                <!-- 操作按钮区域 -->
+                <div class="pt-4 border-t border-gray-200">
+                    <div class="flex flex-wrap justify-center gap-3">
+                        <!-- 配置管理按钮 -->
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" id="exportConfigBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg">
+                                <i class="fa fa-download"></i>
+                                <span>导出配置</span>
+                            </button>
+                            <button type="button" id="importConfigBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg">
+                                <i class="fa fa-upload"></i>
+                                <span>导入配置</span>
+                            </button>
+                            <button type="button" id="saveConfigBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg">
+                                <i class="fa fa-save"></i>
+                                <span>保存配置</span>
+                            </button>
+                            <input type="file" id="configFileInput" accept=".json" style="display: none;">
+                        </div>
+                        
+                        <!-- CSV生成按钮 -->
+                        <button type="submit" class="bg-primary hover:bg-primary/90 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg">
+                            <i class="fa fa-file-excel-o"></i>
+                            <span>生成CSV</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- 预览区域 -->
+        <div class="mt-6 bg-white rounded-xl shadow-md overflow-hidden p-6">
+            <h3 class="section-title flex items-center">
+                <i class="fa fa-eye mr-2 text-primary"></i>
+                生成预览
+            </h3>
+            <div class="overflow-x-auto">
+                <table id="previewTable" class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100" id="previewHeader">
+                            <!-- 项目1到项目20的表头将通过JavaScript动态生成 -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="20" class="border border-gray-300 px-3 py-4 text-center text-gray-500">
+                                请填写表单并点击"生成CSV"按钮查看预览
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始生成空状态，等待用户输入
+            generateEmptyProjectConfig();
+            // 初始生成空预览表头
+            generateEmptyPreviewHeader();
+            // 尝试从localStorage加载配置
+            loadConfigFromLocalStorage();
+        });
+        
+        // 生成空的项目配置
+        function generateEmptyProjectConfig() {
+            const tableBody = document.getElementById('projectConfigTable');
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="border border-gray-300 px-3 py-8 text-center text-gray-500">
+                        <i class="fa fa-info-circle text-xl mb-2"></i><br>
+                        请先使用数据分析功能生成项目配置，或手动添加项目
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // 生成空的预览表头
+        function generateEmptyPreviewHeader() {
+            const headerRow = document.getElementById('previewHeader');
+            headerRow.innerHTML = `
+                <th class="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">请先生成项目配置</th>
+            `;
+        }
+        
+        // 生成项目配置行
+        function generateProjectConfigRows(count, headers = null) {
+            const tableBody = document.getElementById('projectConfigTable');
+            tableBody.innerHTML = '';
+            
+            for (let i = 1; i <= count; i++) {
+                const projectName = headers && headers[i-1] ? headers[i-1] : `项目${i}`;
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="border border-gray-300 px-3 py-2">
+                        <div class="font-medium">${projectName}</div>
+                        <input type="hidden" id="header${i}" name="header${i}" value="${projectName}">
+                    </td>
+                    <td class="border border-gray-300 px-3 py-2">
+                        <select id="type${i}" name="type${i}" class="input-field" onchange="toggleValueInput(${i})">
+                            <option value="fixed">固定值</option>
+                            <option value="combo">组合值</option>
+                            <option value="prefixIncrement">前缀递增</option>
+                        </select>
+                    </td>
+                    <td class="border border-gray-300 px-3 py-2">
+                        <div id="valueContainer${i}">
+                            <input type="text" id="value${i}" name="value${i}" class="input-field" placeholder="请输入值">
+                            <div id="prefixConfig${i}" style="display: none;" class="mt-2 grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">前缀</label>
+                                    <input type="text" id="prefix${i}" name="prefix${i}" class="input-field" placeholder="例如：CODE" value="">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">位数</label>
+                                    <input type="number" id="digits${i}" name="digits${i}" class="input-field" placeholder="例如：3" min="1" max="10" value="3">
+                                </div>
+                            </div>
+                        </div>
+                        <p class="combo-hint" id="hint${i}" style="display: none;"></p>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
+        
+        // 生成预览表头
+        function generatePreviewHeader(count, headers = null) {
+            const headerRow = document.getElementById('previewHeader');
+            headerRow.innerHTML = '';
+            
+            for (let i = 1; i <= count; i++) {
+                const projectName = headers && headers[i-1] ? headers[i-1] : `项目${i}`;
+                const th = document.createElement('th');
+                th.className = 'border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700';
+                th.textContent = projectName;
+                headerRow.appendChild(th);
+            }
+        }
+        
+        // 切换值输入框的提示和配置
+        function toggleValueInput(projectIndex) {
+            const typeSelect = document.getElementById(`type${projectIndex}`);
+            const hint = document.getElementById(`hint${projectIndex}`);
+            const input = document.getElementById(`value${projectIndex}`);
+            const prefixConfig = document.getElementById(`prefixConfig${projectIndex}`);
+            const valueContainer = document.getElementById(`valueContainer${projectIndex}`);
+            
+            switch (typeSelect.value) {
+                case 'combo':
+                    hint.style.display = 'block';
+                    hint.textContent = '提示：多个值用逗号分隔，系统会生成所有可能的组合';
+                    input.placeholder = '例如：A,B,C,D,E';
+                    input.style.display = 'block';
+                    prefixConfig.style.display = 'none';
+                    break;
+                case 'prefixIncrement':
+                    hint.style.display = 'block';
+                    hint.textContent = '提示：系统会生成带有指定前缀和递增数字的值（例如：CODE001, CODE002, CODE003）';
+                    input.placeholder = '起始值（可选，默认为1）';
+                    input.style.display = 'block';
+                    prefixConfig.style.display = 'grid';
+                    break;
+                case 'fixed':
+                default:
+                    hint.style.display = 'none';
+                    input.placeholder = '请输入值';
+                    input.style.display = 'block';
+                    prefixConfig.style.display = 'none';
+                    break;
+            }
+        }
+        
+        // 数据分析功能
+        document.getElementById('analyzeBtn').addEventListener('click', function() {
+            const headerInput = document.getElementById('headerInput').value.trim();
+            const dataInput = document.getElementById('dataInput').value.trim();
+            
+            if (!headerInput || !dataInput) {
+                alert('请输入CSV表头和数据行');
+                return;
+            }
+            
+            // 解析表头和数据
+            const headers = headerInput.split(',').map(h => h.trim());
+            const data = dataInput.split(',').map(d => d.trim());
+            
+            if (headers.length !== data.length) {
+                alert('表头和数据行的列数不匹配');
+                return;
+            }
+            
+            // 分析数据，推荐固定值列
+            const analysisResult = analyzeData(headers, data);
+            
+            // 显示分析结果
+            displayAnalysisResult(analysisResult);
+        });
+        
+        // 数据分析逻辑
+        function analyzeData(headers, data) {
+            const result = [];
+            
+            for (let i = 0; i < headers.length; i++) {
+                const header = headers[i] || `项目${i+1}`;
+                const value = data[i] || '';
+                
+                // 简单的分析逻辑：如果值不是空的，默认推荐为固定值
+                // 可以根据需要扩展更复杂的分析逻辑
+                const recommendedType = value ? 'fixed' : 'combo';
+                
+                result.push({
+                    index: i,
+                    header: header,
+                    value: value,
+                    recommendedType: recommendedType
+                });
+            }
+            
+            return result;
+        }
+        
+        // 显示分析结果
+        function displayAnalysisResult(result) {
+            const contentDiv = document.getElementById('analysisContent');
+            let html = '<table class="w-full border-collapse">';
+            html += '<thead><tr class="bg-green-100"><th class="border border-green-300 px-3 py-2 text-left text-sm font-medium text-green-800">项目名称</th><th class="border border-green-300 px-3 py-2 text-left text-sm font-medium text-green-800">当前值</th><th class="border border-green-300 px-3 py-2 text-left text-sm font-medium text-green-800">推荐类型</th></tr></thead>';
+            html += '<tbody>';
+            
+            result.forEach(item => {
+                html += `<tr class="hover:bg-green-50">`;
+                html += `<td class="border border-green-300 px-3 py-2">${item.header}</td>`;
+                html += `<td class="border border-green-300 px-3 py-2">${item.value}</td>`;
+                html += `<td class="border border-green-300 px-3 py-2">`;
+                html += `<span class="inline-block px-3 py-1 rounded-full text-xs font-medium ${item.recommendedType === 'fixed' ? 'bg-green-200 text-green-800' : 'bg-blue-200 text-blue-800'}">`;
+                html += item.recommendedType === 'fixed' ? '固定值' : '组合值';
+                html += `</span></td>`;
+                html += `</tr>`;
+            });
+            
+            html += '</tbody></table>';
+            contentDiv.innerHTML = html;
+            
+            // 显示分析结果
+            document.getElementById('analysisResult').classList.remove('hidden');
+        }
+        
+        // 应用分析结果到配置
+        document.getElementById('applyAnalysis').addEventListener('click', function() {
+            const headerInput = document.getElementById('headerInput').value.trim();
+            const dataInput = document.getElementById('dataInput').value.trim();
+            
+            if (!headerInput || !dataInput) {
+                alert('请先进行数据分析');
+                return;
+            }
+            
+            // 解析表头和数据
+            const headers = headerInput.split(',').map(h => h.trim());
+            const data = dataInput.split(',').map(d => d.trim());
+            
+            // 动态生成项目配置行
+            generateProjectConfigRows(headers.length, headers);
+            
+            // 动态生成预览表头
+            generatePreviewHeader(headers.length, headers);
+            
+            // 应用到配置
+            for (let i = 0; i < headers.length; i++) {
+                const typeSelect = document.getElementById(`type${i+1}`);
+                const valueInput = document.getElementById(`value${i+1}`);
+                
+                // 设置类型：如果有数据，默认为固定值，否则为组合值
+                const recommendedType = i < data.length && data[i] ? 'fixed' : 'combo';
+                typeSelect.value = recommendedType;
+                
+                // 设置值
+                const value = i < data.length ? data[i] : '';
+                valueInput.value = value;
+                
+                // 切换提示
+                toggleValueInput(i+1);
+            }
+            
+            alert('分析结果已应用到配置');
+        });
+        
+        // CSV生成逻辑
+        document.getElementById('csvForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 动态获取项目数量
+            const projectRows = document.querySelectorAll('#projectConfigTable tr');
+            // 检查是否是空状态
+            if (projectRows.length === 1 && projectRows[0].querySelector('td[colspan="3"]')) {
+                alert('请先生成项目配置');
+                return;
+            }
+            
+            const projectCount = projectRows.length;
+            
+            // 获取项目配置和表头
+            const projectConfigs = [];
+            const headers = [];
+            const comboValues = [];
+            let hasPrefixIncrement = false;
+            
+            for (let i = 1; i <= projectCount; i++) {
+                const type = document.getElementById(`type${i}`).value;
+                const value = document.getElementById(`value${i}`).value || '';
+                const header = document.getElementById(`header${i}`).value || `项目${i}`;
+                
+                headers.push(header);
+                
+                if (type === 'fixed') {
+                    projectConfigs.push({ 
+                        type: 'fixed', 
+                        value: value 
+                    });
+                } else if (type === 'combo') {
+                    const values = value.split(',').map(v => v.trim()).filter(v => v);
+                    projectConfigs.push({ 
+                        type: 'combo', 
+                        values: values 
+                    });
+                    comboValues.push(values);
+                } else if (type === 'prefixIncrement') {
+                    const prefix = document.getElementById(`prefix${i}`).value || '';
+                    const digits = parseInt(document.getElementById(`digits${i}`).value) || 3;
+                    const start = parseInt(value) || 1;
+                    projectConfigs.push({ 
+                        type: 'prefixIncrement', 
+                        prefix: prefix, 
+                        digits: digits, 
+                        start: start 
+                    });
+                    hasPrefixIncrement = true;
+                }
+            }
+            
+            // 验证：如果没有组合值，至少要有一个前缀递增类型
+            const hasValidCombo = comboValues.some(values => values.length > 0);
+            if (!hasValidCombo && !hasPrefixIncrement) {
+                alert('请至少为一个项目设置组合值或前缀递增类型');
+                return;
+            }
+            
+            // 生成CSV内容
+            const csvContent = generateCsv(projectConfigs, headers);
+            
+            // 更新预览
+            updatePreview(projectConfigs, headers);
+            
+            // 下载CSV
+            downloadCsv(csvContent);
+        });
+        
+        // 生成CSV内容
+        function generateCsv(projectConfigs, headers) {
+            let csv = '';
+            
+            // 写入CSV头部
+            for (let i = 0; i < headers.length; i++) {
+                csv += escapeCsvValue(headers[i]);
+                if (i < headers.length - 1) {
+                    csv += ',';
+                }
+            }
+            csv += '\n';
+            
+            // 收集所有组合值的索引
+            const comboIndices = [];
+            for (let i = 0; i < projectConfigs.length; i++) {
+                if (projectConfigs[i].type === 'combo') {
+                    comboIndices.push(i);
+                }
+            }
+            
+            // 获取组合值数组
+            const comboArrays = comboIndices.map(index => projectConfigs[index].values);
+            
+            // 生成所有组合
+            const combinations = generateAllCombinations(comboArrays);
+            
+            // 初始化前缀递增计数器
+            const prefixCounters = {};
+            projectConfigs.forEach((config, index) => {
+                if (config.type === 'prefixIncrement') {
+                    prefixCounters[index] = config.start - 1; // 减1是因为后面会先加1
+                }
+            });
+            
+            // 生成每一行数据
+            for (const comboValues of combinations) {
+                let comboIndex = 0;
+                for (let i = 0; i < projectConfigs.length; i++) {
+                    let cellValue;
+                    const config = projectConfigs[i];
+                    
+                    if (config.type === 'fixed') {
+                        cellValue = config.value;
+                    } else if (config.type === 'combo') {
+                        cellValue = comboValues[comboIndex++];
+                    } else if (config.type === 'prefixIncrement') {
+                        // 生成前缀递增的值
+                        prefixCounters[i]++;
+                        const counter = prefixCounters[i];
+                        const paddedCounter = String(counter).padStart(config.digits, '0');
+                        cellValue = config.prefix + paddedCounter;
+                    } else {
+                        cellValue = '';
+                    }
+                    
+                    csv += escapeCsvValue(cellValue);
+                    if (i < projectConfigs.length - 1) {
+                        csv += ',';
+                    }
+                }
+                csv += '\n';
+            }
+            
+            return csv;
+        }
+        
+        // 生成所有组合
+        function generateAllCombinations(arrays) {
+            if (arrays.length === 0) {
+                return [[]];
+            }
+            
+            const result = [];
+            const firstArray = arrays[0];
+            const remainingArrays = arrays.slice(1);
+            const remainingCombinations = generateAllCombinations(remainingArrays);
+            
+            for (const value of firstArray) {
+                for (const combo of remainingCombinations) {
+                    result.push([value, ...combo]);
+                }
+            }
+            
+            return result;
+        }
+        
+        // 转义CSV值
+        function escapeCsvValue(value) {
+            if (value == null) {
+                return '';
+            }
+            // 如果值包含逗号、引号或换行符，需要用引号括起来
+            if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
+                // 转义引号
+                value = value.replace(/"/g, '""');
+                return '"' + value + '"';
+            }
+            return value;
+        }
+        
+        // 下载CSV文件
+        function downloadCsv(csvContent) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `generated_${new Date().getTime()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // 更新预览
+        function updatePreview(projectConfigs, headers) {
+            const tableBody = document.querySelector('#previewTable tbody');
+            const projectCount = headers.length;
+            
+            // 收集所有组合值的索引
+            const comboIndices = [];
+            for (let i = 0; i < projectConfigs.length; i++) {
+                if (projectConfigs[i].type === 'combo') {
+                    comboIndices.push(i);
+                }
+            }
+            
+            // 获取组合值数组
+            const comboArrays = comboIndices.map(index => projectConfigs[index].values);
+            
+            // 生成所有组合
+            const combinations = generateAllCombinations(comboArrays);
+            
+            // 生成前10行预览
+            let previewHtml = '';
+            let count = 0;
+            const maxPreviewRows = 10;
+            
+            for (const comboValues of combinations) {
+                if (count >= maxPreviewRows) {
+                    break;
+                }
+                
+                previewHtml += '<tr>';
+                let comboIndex = 0;
+                for (let i = 0; i < projectConfigs.length; i++) {
+                    let cellValue;
+                    if (projectConfigs[i].type === 'fixed') {
+                        cellValue = projectConfigs[i].value;
+                    } else {
+                        cellValue = comboValues[comboIndex++];
+                    }
+                    previewHtml += `<td class="border border-gray-300 px-3 py-2 text-sm">${cellValue || ''}</td>`;
+                }
+                previewHtml += '</tr>';
+                count++;
+            }
+            
+            // 如果没有数据
+            if (previewHtml === '') {
+                previewHtml = `<tr><td colspan="${projectCount}" class="border border-gray-300 px-3 py-4 text-center text-gray-500">没有生成数据</td></tr>`;
+            }
+            
+            // 添加总计行
+            previewHtml += `<tr class="bg-gray-50 font-medium">`;
+            previewHtml += `<td colspan="${projectCount - 1}" class="border border-gray-300 px-3 py-2 text-right">总计行数：</td>`;
+            previewHtml += `<td class="border border-gray-300 px-3 py-2 text-primary">${combinations.length}</td>`;
+            previewHtml += `</tr>`;
+            
+            tableBody.innerHTML = previewHtml;
+        }
+        
+        // ========== 配置管理功能 ==========
+        
+        // 导出配置为JSON
+        document.getElementById('exportConfigBtn').addEventListener('click', function() {
+            const config = getCurrentConfig();
+            if (!config) {
+                alert('没有可导出的配置');
+                return;
+            }
+            
+            const jsonString = JSON.stringify(config, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `csv-generator-config_${new Date().getTime()}.json`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+        
+        // 导入配置按钮点击事件
+        document.getElementById('importConfigBtn').addEventListener('click', function() {
+            document.getElementById('configFileInput').click();
+        });
+        
+        // 配置文件选择事件
+        document.getElementById('configFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    applyConfig(config);
+                    alert('配置导入成功');
+                } catch (error) {
+                    alert('配置文件格式错误');
+                }
+            };
+            reader.readAsText(file);
+        });
+        
+        // 保存配置到localStorage
+        document.getElementById('saveConfigBtn').addEventListener('click', function() {
+            const config = getCurrentConfig();
+            if (!config) {
+                alert('没有可保存的配置');
+                return;
+            }
+            
+            localStorage.setItem('csvGeneratorConfig', JSON.stringify(config));
+            alert('配置已保存到浏览器本地存储');
+        });
+        
+        // 从localStorage加载配置
+        function loadConfigFromLocalStorage() {
+            const configStr = localStorage.getItem('csvGeneratorConfig');
+            if (configStr) {
+                try {
+                    const config = JSON.parse(configStr);
+                    applyConfig(config);
+                } catch (error) {
+                    console.error('Failed to load config from localStorage:', error);
+                }
+            }
+        }
+        
+        // 获取当前配置
+        function getCurrentConfig() {
+            const projectRows = document.querySelectorAll('#projectConfigTable tr');
+            // 检查是否是空状态
+            if (projectRows.length === 1 && projectRows[0].querySelector('td[colspan="3"]')) {
+                return null;
+            }
+            
+            const headers = [];
+            const projectConfigs = [];
+            
+            for (let i = 1; i <= projectRows.length; i++) {
+                const headerInput = document.getElementById(`header${i}`);
+                const typeSelect = document.getElementById(`type${i}`);
+                const valueInput = document.getElementById(`value${i}`);
+                
+                if (headerInput && typeSelect && valueInput) {
+                    const header = headerInput.value;
+                    const type = typeSelect.value;
+                    const value = valueInput.value;
+                    
+                    headers.push(header);
+                    
+                    // 根据类型获取不同的配置
+                    if (type === 'prefixIncrement') {
+                        const prefix = document.getElementById(`prefix${i}`).value;
+                        const digits = document.getElementById(`digits${i}`).value;
+                        projectConfigs.push({
+                            header: header,
+                            type: type,
+                            value: value,
+                            prefix: prefix,
+                            digits: digits
+                        });
+                    } else {
+                        projectConfigs.push({
+                            header: header,
+                            type: type,
+                            value: value
+                        });
+                    }
+                }
+            }
+            
+            return {
+                headers: headers,
+                projectConfigs: projectConfigs,
+                timestamp: new Date().toISOString()
+            };
+        }
+        
+        // 应用配置
+        function applyConfig(config) {
+            if (!config || !config.headers || !config.projectConfigs) {
+                alert('配置格式错误');
+                return;
+            }
+            
+            // 生成项目配置行
+            generateProjectConfigRows(config.headers.length, config.headers);
+            
+            // 生成预览表头
+            generatePreviewHeader(config.headers.length, config.headers);
+            
+            // 应用配置值
+            for (let i = 0; i < config.projectConfigs.length; i++) {
+                const projectConfig = config.projectConfigs[i];
+                const typeSelect = document.getElementById(`type${i+1}`);
+                const valueInput = document.getElementById(`value${i+1}`);
+                
+                if (typeSelect && valueInput) {
+                    typeSelect.value = projectConfig.type;
+                    valueInput.value = projectConfig.value;
+                    
+                    // 如果是前缀递增类型，还需要设置前缀和位数
+                    if (projectConfig.type === 'prefixIncrement') {
+                        const prefixInput = document.getElementById(`prefix${i+1}`);
+                        const digitsInput = document.getElementById(`digits${i+1}`);
+                        if (prefixInput && digitsInput) {
+                            prefixInput.value = projectConfig.prefix || '';
+                            digitsInput.value = projectConfig.digits || '3';
+                        }
+                    }
+                    
+                    toggleValueInput(i+1);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
