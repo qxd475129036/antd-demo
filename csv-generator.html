@@ -124,12 +124,18 @@
                     数据分析功能
                 </h3>
                 <p class="mb-4 text-sm text-green-700">
-                    输入CSV文件的表头和一行数据，系统将自动分析并推荐哪些列应该设置为固定值
+                    输入CSV文件的数据行，可选择是否输入表头，系统将自动分析并推荐哪些列应该设置为固定值
                 </p>
                 
                 <div class="space-y-4">
+                    <!-- 选项：是否包含header -->
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="includeHeader" name="includeHeader" checked class="rounded text-green-600 focus:ring-green-500">
+                        <label class="text-sm font-medium text-green-700" for="includeHeader">包含CSV表头</label>
+                    </div>
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="input-group">
+                        <div class="input-group" id="headerInputGroup">
                             <label class="input-label" for="headerInput">CSV表头（用逗号分隔）</label>
                             <textarea id="headerInput" name="headerInput" class="input-field" rows="2" placeholder="例如：项目1,项目2,项目3,...,项目20"></textarea>
                         </div>
@@ -193,6 +199,12 @@
 
                 <!-- 操作按钮区域 -->
                 <div class="pt-4 border-t border-gray-200">
+                    <!-- 选项：是否包含输出表头 -->
+                    <div class="flex items-center justify-center mb-3 space-x-2">
+                        <input type="checkbox" id="outputIncludeHeader" name="outputIncludeHeader" checked class="rounded text-primary focus:ring-primary">
+                        <label class="text-sm font-medium text-gray-700" for="outputIncludeHeader">生成的CSV包含表头</label>
+                    </div>
+                    
                     <div class="flex flex-wrap justify-center gap-3">
                         <!-- 配置管理按钮 -->
                         <div class="flex flex-wrap gap-2">
@@ -255,6 +267,16 @@
             generateEmptyPreviewHeader();
             // 尝试从localStorage加载配置
             loadConfigFromLocalStorage();
+            
+            // 添加包含表头选项的事件监听器
+            document.getElementById('includeHeader').addEventListener('change', function() {
+                const headerInputGroup = document.getElementById('headerInputGroup');
+                if (this.checked) {
+                    headerInputGroup.style.display = 'block';
+                } else {
+                    headerInputGroup.style.display = 'none';
+                }
+            });
         });
         
         // 生成空的项目配置
@@ -369,21 +391,33 @@
         
         // 数据分析功能
         document.getElementById('analyzeBtn').addEventListener('click', function() {
+            const includeHeader = document.getElementById('includeHeader').checked;
             const headerInput = document.getElementById('headerInput').value.trim();
             const dataInput = document.getElementById('dataInput').value.trim();
             
-            if (!headerInput || !dataInput) {
-                alert('请输入CSV表头和数据行');
+            if (!dataInput) {
+                alert('请输入数据行');
                 return;
             }
             
-            // 解析表头和数据
-            const headers = headerInput.split(',').map(h => h.trim());
+            // 解析数据
             const data = dataInput.split(',').map(d => d.trim());
             
-            if (headers.length !== data.length) {
-                alert('表头和数据行的列数不匹配');
-                return;
+            // 解析表头
+            let headers;
+            if (includeHeader && headerInput) {
+                headers = headerInput.split(',').map(h => h.trim());
+                // 确保表头和数据列数匹配
+                if (headers.length !== data.length) {
+                    alert('表头和数据行的列数不匹配');
+                    return;
+                }
+            } else {
+                // 生成默认表头
+                headers = [];
+                for (let i = 1; i <= data.length; i++) {
+                    headers.push(`项目${i}`);
+                }
             }
             
             // 分析数据，推荐固定值列
@@ -397,7 +431,7 @@
         function analyzeData(headers, data) {
             const result = [];
             
-            for (let i = 0; i < headers.length; i++) {
+            for (let i = 0; i < data.length; i++) {
                 const header = headers[i] || `项目${i+1}`;
                 const value = data[i] || '';
                 
@@ -443,17 +477,34 @@
         
         // 应用分析结果到配置
         document.getElementById('applyAnalysis').addEventListener('click', function() {
+            const includeHeader = document.getElementById('includeHeader').checked;
             const headerInput = document.getElementById('headerInput').value.trim();
             const dataInput = document.getElementById('dataInput').value.trim();
             
-            if (!headerInput || !dataInput) {
-                alert('请先进行数据分析');
+            if (!dataInput) {
+                alert('请输入数据行');
                 return;
             }
             
-            // 解析表头和数据
-            const headers = headerInput.split(',').map(h => h.trim());
+            // 解析数据
             const data = dataInput.split(',').map(d => d.trim());
+            
+            // 解析表头
+            let headers;
+            if (includeHeader && headerInput) {
+                headers = headerInput.split(',').map(h => h.trim());
+                // 确保表头和数据列数匹配
+                if (headers.length !== data.length) {
+                    alert('表头和数据行的列数不匹配');
+                    return;
+                }
+            } else {
+                // 生成默认表头
+                headers = [];
+                for (let i = 1; i <= data.length; i++) {
+                    headers.push(`项目${i}`);
+                }
+            }
             
             // 动态生成项目配置行
             generateProjectConfigRows(headers.length, headers);
@@ -555,14 +606,19 @@
         function generateCsv(projectConfigs, headers) {
             let csv = '';
             
-            // 写入CSV头部
-            for (let i = 0; i < headers.length; i++) {
-                csv += escapeCsvValue(headers[i]);
-                if (i < headers.length - 1) {
-                    csv += ',';
+            // 检查是否包含输出表头
+            const outputIncludeHeader = document.getElementById('outputIncludeHeader').checked;
+            
+            // 如果需要包含表头，写入CSV头部
+            if (outputIncludeHeader) {
+                for (let i = 0; i < headers.length; i++) {
+                    csv += escapeCsvValue(headers[i]);
+                    if (i < headers.length - 1) {
+                        csv += ',';
+                    }
                 }
+                csv += '\n';
             }
-            csv += '\n';
             
             // 收集所有组合值的索引
             const comboIndices = [];
@@ -643,12 +699,21 @@
             if (value == null) {
                 return '';
             }
-            // 如果值包含逗号、引号或换行符，需要用引号括起来
-            if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
-                // 转义引号
-                value = value.replace(/"/g, '""');
-                return '"' + value + '"';
+            
+            // 检查值是否已经被双引号包围
+            const isQuoted = value.startsWith('"') && value.endsWith('"');
+            
+            // 如果值已经被双引号包围，或者包含逗号、引号、换行符等特殊字符，需要处理
+            if (isQuoted || value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
+                // 移除原有的双引号（如果有）
+                let processedValue = isQuoted ? value.slice(1, -1) : value;
+                // 转义所有引号
+                processedValue = processedValue.replace(/"/g, '""');
+                // 重新添加双引号
+                return '"' + processedValue + '"';
             }
+            
+            // 对于普通值，直接返回
             return value;
         }
         
