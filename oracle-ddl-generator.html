@@ -265,7 +265,7 @@
             <h2>JSON 输入</h2>
             <div class="form-group">
                 <label for="jsonInput">JSON 字符串</label>
-                <textarea id="jsonInput" placeholder='示例: [{"name": "ID", "type": "NUMBER", "length": "10", "precision": "0", "nullable": "NOT NULL"}, {...}]'></textarea>
+                <textarea id="jsonInput" placeholder='示例: [{"name": "ID", "type": "NUMBER", "length": "10", "precision": "0", "nullable": "NOT NULL", "isPrimaryKey": true}, {...}]'></textarea>
                 <div id="jsonError" class="error"></div>
             </div>
         </div>
@@ -448,8 +448,13 @@
             
             try {
                 const fields = JSON.parse(jsonInput);
+                // 确保每个字段都有isPrimaryKey属性
+                const processedFields = fields.map(field => ({
+                    ...field,
+                    isPrimaryKey: field.isPrimaryKey || false
+                }));
                 jsonError.textContent = '';
-                return fields;
+                return processedFields;
             } catch (error) {
                 jsonError.textContent = 'JSON格式错误: ' + error.message;
                 return [];
