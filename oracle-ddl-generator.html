@@ -146,8 +146,20 @@
         
         .result-section {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 20px;
+        }
+        
+        @media (max-width: 1024px) {
+            .result-section {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .result-section {
+                grid-template-columns: 1fr;
+            }
         }
         
         .result-box {
@@ -300,6 +312,10 @@
                 <div class="result-box">
                     <h3>ALTER TABLE</h3>
                     <textarea id="alertTableResult" readonly></textarea>
+                </div>
+                <div class="result-box">
+                    <h3>主键索引</h3>
+                    <textarea id="primaryKeyResult" readonly></textarea>
                 </div>
             </div>
         </div>
@@ -474,7 +490,6 @@
             const tableName = getTableNameWithSchema();
             
             let fieldsSql = '';
-            const primaryKeyFields = [];
             
             fields.forEach((field, index) => {
                 let fieldSql = `  ${field.name} ${field.type}`;
@@ -487,10 +502,6 @@
                 
                 fieldSql += ` ${field.nullable}`;
                 
-                if (field.isPrimaryKey) {
-                    primaryKeyFields.push(field.name);
-                }
-                
                 if (index < fields.length - 1) {
                     fieldSql += ',';
                 }
@@ -502,43 +513,52 @@
                 .replace('{tableName}', tableName)
                 .replace('{fields}', fieldsSql);
             
-            // 添加unique index和primary key
-            if (primaryKeyFields.length > 0) {
-                ddl += '\n\n';
-                
-                // 提取schema和表名
-                let schemaName = '';
-                let tableNameOnly = tableName;
-                if (tableName.includes('.')) {
-                    const parts = tableName.split('.');
-                    schemaName = parts[0];
-                    tableNameOnly = parts[1];
-                }
-                
-                // 生成索引和约束名称
-                const indexName = `IDX_${tableNameOnly}_PK`;
-                
-                // 添加删除主键和索引的语句
-                ddl += `-- DDL to apply change\n`;
-                ddl += `ALTER TABLE ${tableName} DROP PRIMARY KEY;\n`;
-                if (schemaName) {
-                    ddl += `DROP INDEX ${schemaName}.${indexName};\n\n`;
-                } else {
-                    ddl += `DROP INDEX ${indexName};\n\n`;
-                }
-                
-                // 添加索引
-                ddl += `-- add index column\n`;
-                if (schemaName) {
-                    ddl += `CREATE UNIQUE INDEX ${schemaName}.${indexName} ON ${tableName}(${primaryKeyFields.join(', ')});\n\n`;
-                } else {
-                    ddl += `CREATE UNIQUE INDEX ${indexName} ON ${tableName}(${primaryKeyFields.join(', ')});\n\n`;
-                }
-                
-                // 添加主键约束
-                ddl += `-- add primary key column\n`;
-                ddl += `ALTER TABLE ${tableName} ADD CONSTRAINT ${indexName} PRIMARY KEY (${primaryKeyFields.join(', ')});\n`;
+            return ddl;
+        }
+        
+        // 生成主键索引DDL
+        function generatePrimaryKeyDDL(fields) {
+            const tableName = getTableNameWithSchema();
+            const primaryKeyFields = fields.filter(field => field.isPrimaryKey);
+            
+            if (primaryKeyFields.length === 0) {
+                return '';
             }
+            
+            let ddl = '';
+            
+            // 提取schema和表名
+            let schemaName = '';
+            let tableNameOnly = tableName;
+            if (tableName.includes('.')) {
+                const parts = tableName.split('.');
+                schemaName = parts[0];
+                tableNameOnly = parts[1];
+            }
+            
+            // 生成索引和约束名称
+            const indexName = `IDX_${tableNameOnly}_PK`;
+            
+            // 添加删除主键和索引的语句
+            ddl += `-- DDL to apply change\n`;
+            ddl += `ALTER TABLE ${tableName} DROP PRIMARY KEY;\n`;
+            if (schemaName) {
+                ddl += `DROP INDEX ${schemaName}.${indexName};\n\n`;
+            } else {
+                ddl += `DROP INDEX ${indexName};\n\n`;
+            }
+            
+            // 添加索引
+            ddl += `-- add index column\n`;
+            if (schemaName) {
+                ddl += `CREATE UNIQUE INDEX ${schemaName}.${indexName} ON ${tableName}(${primaryKeyFields.map(f => f.name).join(', ')});\n\n`;
+            } else {
+                ddl += `CREATE UNIQUE INDEX ${indexName} ON ${tableName}(${primaryKeyFields.map(f => f.name).join(', ')});\n\n`;
+            }
+            
+            // 添加主键约束
+            ddl += `-- add primary key column\n`;
+            ddl += `ALTER TABLE ${tableName} ADD CONSTRAINT ${indexName} PRIMARY KEY (${primaryKeyFields.map(f => f.name).join(', ')});\n`;
             
             return ddl;
         }
@@ -590,9 +610,11 @@
             
             const createTableDDL = generateCreateTableDDL(fields);
             const alertTableDDL = generateAlertTableDDL(fields);
+            const primaryKeyDDL = generatePrimaryKeyDDL(fields);
             
             document.getElementById('createTableResult').value = createTableDDL;
             document.getElementById('alertTableResult').value = alertTableDDL;
+            document.getElementById('primaryKeyResult').value = primaryKeyDDL;
         }
     </script>
 </body>
