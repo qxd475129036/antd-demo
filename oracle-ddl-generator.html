@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oracle DDL 生成工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .input-mode {
+            margin-bottom: 20px;
+        }
+        
+        .input-mode label {
+            margin-right: 20px;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .fields-container {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .field-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .field-row input,
+        .field-row select {
+            flex: 1;
+            padding: 6px;
+        }
+        
+        .field-row button {
+            padding: 6px 12px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .field-row button:hover {
+            background-color: #c82333;
+        }
+        
+        #addFieldBtn {
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        
+        #addFieldBtn:hover {
+            background-color: #218838;
+        }
+        
+        .template-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        
+        #saveTemplateBtn {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        #saveTemplateBtn:hover {
+            background-color: #0069d9;
+        }
+        
+        .result-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .result-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        
+        .result-box h3 {
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .result-box textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        #generateBtn {
+            padding: 12px 24px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        
+        #generateBtn:hover {
+            background-color: #138496;
+        }
+        
+        .error {
+            color: #dc3545;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .result-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .field-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .field-row input,
+            .field-row select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Oracle DDL 生成工具</h1>
+        
+        <!-- 输入方式选择 -->
+        <div class="section">
+            <h2>输入方式</h2>
+            <div class="input-mode">
+                <label>
+                    <input type="radio" name="inputMode" value="direct" checked>
+                    直接选择字段
+                </label>
+                <label>
+                    <input type="radio" name="inputMode" value="json">
+                    JSON 字符串输入
+                </label>
+            </div>
+        </div>
+        
+        <!-- 表名输入 -->
+        <div class="section">
+            <h2>表信息</h2>
+            <div class="form-group">
+                <label for="schemaName">Schema名称</label>
+                <input type="text" id="schemaName" placeholder="请输入Schema名称">
+            </div>
+            <div class="form-group">
+                <label for="tableName">表名</label>
+                <input type="text" id="tableName" placeholder="请输入表名">
+            </div>
+        </div>
+        
+        <!-- 直接选择字段输入 -->
+        <div class="section" id="directInputSection">
+            <h2>字段信息</h2>
+            <div id="fieldsContainer" class="fields-container">
+                <div class="field-row" style="font-weight: bold; background-color: #f8f9fa; padding: 8px; border-bottom: 2px solid #ddd;">
+                    <div>字段名</div>
+                    <div>类型</div>
+                    <div>长度</div>
+                    <div>精度</div>
+                    <div>空值约束</div>
+                    <div>主键</div>
+                    <div>操作</div>
+                </div>
+                <!-- 字段行将动态添加 -->
+            </div>
+            <button id="addFieldBtn">添加字段</button>
+        </div>
+        
+        <!-- JSON 字符串输入 -->
+        <div class="section" id="jsonInputSection" style="display: none;">
+            <h2>JSON 输入</h2>
+            <div class="form-group">
+                <label for="jsonInput">JSON 字符串</label>
+                <textarea id="jsonInput" placeholder='示例: [{"name": "ID", "type": "NUMBER", "length": "10", "precision": "0", "nullable": "NOT NULL"}, {...}]'></textarea>
+                <div id="jsonError" class="error"></div>
+            </div>
+        </div>
+        
+        <!-- 模板输入 -->
+        <div class="section">
+            <h2>模板设置</h2>
+            <div class="template-section">
+                <div class="form-group">
+                    <label for="createTableTemplate">CREATE TABLE 模板</label>
+                    <textarea id="createTableTemplate" placeholder="CREATE TABLE {tableName} ({fields})"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="alertTableTemplate">ALTER TABLE 模板</label>
+                    <textarea id="alertTableTemplate" placeholder="ALTER TABLE {tableName} {alterStatements}"></textarea>
+                </div>
+                <button id="saveTemplateBtn">保存模板到本地存储</button>
+            </div>
+        </div>
+        
+        <!-- 生成按钮 -->
+        <button id="generateBtn">生成 DDL</button>
+        
+        <!-- 生成结果 -->
+        <div class="section">
+            <h2>生成结果</h2>
+            <div class="result-section">
+                <div class="result-box">
+                    <h3>CREATE TABLE</h3>
+                    <textarea id="createTableResult" readonly></textarea>
+                </div>
+                <div class="result-box">
+                    <h3>ALTER TABLE</h3>
+                    <textarea id="alertTableResult" readonly></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 全局变量
+        let fields = [];
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载模板
+            loadTemplates();
+            
+            // 添加第一个字段
+            addField();
+            
+            // 绑定事件
+            bindEvents();
+        });
+        
+        // 加载模板
+        function loadTemplates() {
+            const createTableTemplate = localStorage.getItem('createTableTemplate');
+            const alertTableTemplate = localStorage.getItem('alertTableTemplate');
+            
+            if (createTableTemplate) {
+                document.getElementById('createTableTemplate').value = createTableTemplate;
+            } else {
+                // 默认模板
+                document.getElementById('createTableTemplate').value = 'CREATE TABLE {tableName} ({fields})';
+            }
+            
+            if (alertTableTemplate) {
+                document.getElementById('alertTableTemplate').value = alertTableTemplate;
+            } else {
+                // 默认模板
+                document.getElementById('alertTableTemplate').value = 'ALTER TABLE {tableName} {alterStatements}';
+            }
+        }
+        
+        // 保存模板
+        function saveTemplates() {
+            const createTableTemplate = document.getElementById('createTableTemplate').value;
+            const alertTableTemplate = document.getElementById('alertTableTemplate').value;
+            
+            localStorage.setItem('createTableTemplate', createTableTemplate);
+            localStorage.setItem('alertTableTemplate', alertTableTemplate);
+            
+            alert('模板已保存到本地存储');
+        }
+        
+        // 绑定事件
+        function bindEvents() {
+            // 输入方式切换
+            document.querySelectorAll('input[name="inputMode"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'direct') {
+                        document.getElementById('directInputSection').style.display = 'block';
+                        document.getElementById('jsonInputSection').style.display = 'none';
+                    } else {
+                        document.getElementById('directInputSection').style.display = 'none';
+                        document.getElementById('jsonInputSection').style.display = 'block';
+                    }
+                });
+            });
+            
+            // 添加字段按钮
+            document.getElementById('addFieldBtn').addEventListener('click', addField);
+            
+            // 保存模板按钮
+            document.getElementById('saveTemplateBtn').addEventListener('click', saveTemplates);
+            
+            // 生成按钮
+            document.getElementById('generateBtn').addEventListener('click', generateDDL);
+        }
+        
+        // 添加字段
+        function addField() {
+            const fieldsContainer = document.getElementById('fieldsContainer');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            
+            fieldRow.innerHTML = `
+                <input type="text" placeholder="字段名" class="field-name">
+                <select class="field-type">
+                    <option value="VARCHAR2">VARCHAR2</option>
+                    <option value="NUMBER">NUMBER</option>
+                    <option value="DATE">DATE</option>
+                    <option value="TIMESTAMP">TIMESTAMP</option>
+                    <option value="CLOB">CLOB</option>
+                </select>
+                <input type="text" placeholder="长度" class="field-length" value="50">
+                <input type="text" placeholder="精度" class="field-precision" value="0">
+                <select class="field-nullable">
+                    <option value="NULL">NULL</option>
+                    <option value="NOT NULL">NOT NULL</option>
+                </select>
+                <input type="checkbox" class="field-primary-key">
+                <button type="button" class="remove-field">删除</button>
+            `;
+            
+            fieldsContainer.appendChild(fieldRow);
+            
+            // 绑定删除按钮事件
+            fieldRow.querySelector('.remove-field').addEventListener('click', function() {
+                fieldRow.remove();
+            });
+        }
+        
+        // 从直接输入获取字段
+        function getFieldsFromDirectInput() {
+            const fieldRows = document.querySelectorAll('.field-row');
+            const fields = [];
+            
+            fieldRows.forEach(row => {
+                const nameInput = row.querySelector('.field-name');
+                if (!nameInput) return; // 跳过表头行
+                
+                const name = nameInput.value;
+                const type = row.querySelector('.field-type').value;
+                const length = row.querySelector('.field-length').value;
+                const precision = row.querySelector('.field-precision').value;
+                const nullable = row.querySelector('.field-nullable').value;
+                const isPrimaryKey = row.querySelector('.field-primary-key').checked;
+                
+                if (name) {
+                    fields.push({
+                        name: name,
+                        type: type,
+                        length: length,
+                        precision: precision,
+                        nullable: nullable,
+                        isPrimaryKey: isPrimaryKey
+                    });
+                }
+            });
+            
+            return fields;
+        }
+        
+        // 从JSON输入获取字段
+        function getFieldsFromJsonInput() {
+            const jsonInput = document.getElementById('jsonInput').value;
+            const jsonError = document.getElementById('jsonError');
+            
+            try {
+                const fields = JSON.parse(jsonInput);
+                jsonError.textContent = '';
+                return fields;
+            } catch (error) {
+                jsonError.textContent = 'JSON格式错误: ' + error.message;
+                return [];
+            }
+        }
+        
+        // 生成带Schema的表名
+        function getTableNameWithSchema() {
+            const schemaName = document.getElementById('schemaName').value;
+            const tableName = document.getElementById('tableName').value;
+            return schemaName ? `${schemaName}.${tableName}` : tableName;
+        }
+        
+        // 生成CREATE TABLE DDL
+        function generateCreateTableDDL(fields) {
+            const template = document.getElementById('createTableTemplate').value;
+            const tableName = getTableNameWithSchema();
+            
+            let fieldsSql = '';
+            const primaryKeyFields = [];
+            
+            fields.forEach((field, index) => {
+                let fieldSql = `  ${field.name} ${field.type}`;
+                
+                if (field.type === 'VARCHAR2') {
+                    fieldSql += `(${field.length})`;
+                } else if (field.type === 'NUMBER' && field.precision > 0) {
+                    fieldSql += `(${field.length}, ${field.precision})`;
+                }
+                
+                fieldSql += ` ${field.nullable}`;
+                
+                if (field.isPrimaryKey) {
+                    primaryKeyFields.push(field.name);
+                }
+                
+                if (index < fields.length - 1) {
+                    fieldSql += ',';
+                }
+                
+                fieldsSql += fieldSql + '\n';
+            });
+            
+            let ddl = template
+                .replace('{tableName}', tableName)
+                .replace('{fields}', fieldsSql);
+            
+            // 添加unique index和primary key
+            if (primaryKeyFields.length > 0) {
+                ddl += '\n\n';
+                
+                // 提取schema和表名
+                let schemaName = '';
+                let tableNameOnly = tableName;
+                if (tableName.includes('.')) {
+                    const parts = tableName.split('.');
+                    schemaName = parts[0];
+                    tableNameOnly = parts[1];
+                }
+                
+                // 生成索引和约束名称
+                const indexName = `IDX_${tableNameOnly}_PK`;
+                
+                // 添加删除主键和索引的语句
+                ddl += `-- DDL to apply change\n`;
+                ddl += `ALTER TABLE ${tableName} DROP PRIMARY KEY;\n`;
+                if (schemaName) {
+                    ddl += `DROP INDEX ${schemaName}.${indexName};\n\n`;
+                } else {
+                    ddl += `DROP INDEX ${indexName};\n\n`;
+                }
+                
+                // 添加索引
+                ddl += `-- add index column\n`;
+                if (schemaName) {
+                    ddl += `CREATE UNIQUE INDEX ${schemaName}.${indexName} ON ${tableName}(${primaryKeyFields.join(', ')});\n\n`;
+                } else {
+                    ddl += `CREATE UNIQUE INDEX ${indexName} ON ${tableName}(${primaryKeyFields.join(', ')});\n\n`;
+                }
+                
+                // 添加主键约束
+                ddl += `-- add primary key column\n`;
+                ddl += `ALTER TABLE ${tableName} ADD CONSTRAINT ${indexName} PRIMARY KEY (${primaryKeyFields.join(', ')});\n`;
+            }
+            
+            return ddl;
+        }
+        
+        // 生成ALTER TABLE DDL
+        function generateAlertTableDDL(fields) {
+            const template = document.getElementById('alertTableTemplate').value;
+            const tableName = getTableNameWithSchema();
+            
+            let alterStatements = '';
+            fields.forEach((field, index) => {
+                let fieldSql = `ALTER TABLE ${tableName} ADD ${field.name} ${field.type}`;
+                
+                if (field.type === 'VARCHAR2') {
+                    fieldSql += `(${field.length})`;
+                } else if (field.type === 'NUMBER' && field.precision > 0) {
+                    fieldSql += `(${field.length}, ${field.precision})`;
+                }
+                
+                fieldSql += ` ${field.nullable};`;
+                
+                alterStatements += fieldSql + '\n\n';
+            });
+            
+            return alterStatements;
+        }
+        
+        // 生成DDL
+        function generateDDL() {
+            const tableName = document.getElementById('tableName').value;
+            if (!tableName) {
+                alert('请输入表名');
+                return;
+            }
+            
+            let fields;
+            const inputMode = document.querySelector('input[name="inputMode"]:checked').value;
+            
+            if (inputMode === 'direct') {
+                fields = getFieldsFromDirectInput();
+            } else {
+                fields = getFieldsFromJsonInput();
+            }
+            
+            if (fields.length === 0) {
+                alert('请添加字段');
+                return;
+            }
+            
+            const createTableDDL = generateCreateTableDDL(fields);
+            const alertTableDDL = generateAlertTableDDL(fields);
+            
+            document.getElementById('createTableResult').value = createTableDDL;
+            document.getElementById('alertTableResult').value = alertTableDDL;
+        }
+    </script>
+</body>
+</html>
